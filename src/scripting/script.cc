@@ -54,6 +54,11 @@ static duk_function_list_entry js_global_functions[] = {
     { "print", js_print, DUK_VARARGS },
     { "addCdsObject", js_addCdsObject, 3 },
     { "copyObject", js_copyObject, 1 },
+    { "getEnv", js_getEnv, 1 },
+#ifdef HAVE_CURL
+    { "httpGet", js_httpGet, 1 },
+    { "urlEncode", js_urlEncode, 1 },
+#endif
     { "f2i", js_f2i, 1 },
     { "m2i", js_m2i, 1 },
     { "p2i", js_p2i, 1 },

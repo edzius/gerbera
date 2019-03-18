@@ -41,6 +41,11 @@
 #include "storage/storage.h"
 #include "util/string_converter.h"
 
+#ifdef HAVE_CURL
+#include "url.h"
+#include <curl/curl.h>
+#endif
+
 //extern "C" {
 
 duk_ret_t js_print(duk_context* ctx)
@@ -198,6 +203,90 @@ duk_ret_t js_addCdsObject(duk_context* ctx)
     }
     return 0;
 }
+
+duk_ret_t js_getEnv(duk_context *ctx)
+{
+    char *val;
+    const char *key = duk_to_string(ctx, 0);
+    if (!key)
+        return duk_error(ctx, DUK_ERR_TYPE_ERROR, "getEnv argument is not string");
+
+    val = getenv(key);
+    if (!val)
+        return 0;
+
+    duk_push_lstring(ctx, val, strlen(val));
+    return 1;
+}
+
+#ifdef HAVE_CURL
+duk_ret_t js_httpGet(duk_context *ctx)
+{
+    std::string buffer;
+    long retcode;
+    const char *requrl = duk_to_string(ctx, 0);
+    if (!requrl)
+        return duk_error(ctx, DUK_ERR_TYPE_ERROR, "httpGet argument is not URL string");
+
+    try {
+        log_debug("DOWNLOADING URL: %s\n", requrl);
+        buffer = URL::download(_(requrl), &retcode,
+            nullptr, false, false, true);
+
+    } catch (const Exception& ex) {
+        log_error("Failed to GET HTTP request: %s\n",
+            ex.getMessage().c_str());
+        return 0;
+    }
+
+    if (buffer.empty()) {
+        log_error("Failed to GET HTTP request - empty response\n");
+        return 0;
+    }
+
+    if (retcode != 200) {
+        log_error("Failed to GET HTTP request - status %u\n", retcode);
+        return 0;
+    }
+
+    log_debug("GOT BUFFER\n%s\n", buffer.c_str());
+
+    try
+    {
+        duk_push_lstring(ctx, buffer.c_str(), buffer.length());
+        return 1;
+    }
+    catch (const Exception & e)
+    {
+        log_error("%s\n", e.getMessage().c_str());
+        e.printStackTrace();
+    }
+
+    return 0;
+}
+
+duk_ret_t js_urlEncode(duk_context *ctx)
+{
+    CURL* curl;
+    char *surl;
+    const char *requrl = duk_to_string(ctx, 0);
+    if (!requrl)
+        return duk_error(ctx, DUK_ERR_TYPE_ERROR, "urlEncode argument is not string");
+
+    curl = curl_easy_init();
+    if (curl == nullptr)
+        return 0;
+
+    surl = curl_easy_escape(curl, requrl, strlen(requrl));
+    curl_easy_cleanup(curl);
+    if (!surl)
+        return 0;
+
+    duk_push_lstring(ctx, surl, strlen(surl));
+    curl_free(surl);
+    return 1;
+}
+#endif
 
 static duk_ret_t convert_charset_generic(duk_context* ctx, charset_convert_t chr)
 {
