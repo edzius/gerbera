@@ -40,6 +40,12 @@
 #include "config_manager.h"
 #include "metadata_handler.h"
 
+#ifdef HAVE_CURL
+#include "url.h"
+#include "zmm/zmm.h"
+#include <curl/curl.h>
+#endif
+
 using namespace zmm;
 
 //extern "C" {
@@ -239,6 +245,55 @@ duk_ret_t js_addCdsObject(duk_context *ctx)
     }
     return 0;
 }
+
+#ifdef HAVE_CURL
+duk_ret_t js_doHttpGet(duk_context *ctx)
+{
+    zmm::Ref<URL> url;
+    std::string buffer;
+    long retcode;
+    const char *requrl = duk_to_string(ctx, 0);
+    if (!requrl)
+        return duk_error(ctx, DUK_ERR_TYPE_ERROR, "doHttpGet argument is not URL string");
+
+    url = Ref<URL>(new URL());
+    try {
+        log_debug("DOWNLOADING URL: %s\n", requrl);
+        buffer = url->download(_(requrl), &retcode,
+            nullptr, false, true, true);
+
+    } catch (const Exception& ex) {
+        log_error("Failed to GET HTTP request: %s\n",
+            ex.getMessage().c_str());
+        return 0;
+    }
+
+    if (buffer.empty()) {
+        log_error("Failed to GET HTTP request - empty response\n");
+        return 0;
+    }
+
+    if (retcode != 200) {
+        log_error("Failed to GET HTTP request - status %u\n", retcode);
+        return 0;
+    }
+
+    log_debug("GOT BUFFER\n%s\n", buffer.c_str());
+
+    try
+    {
+        duk_push_lstring(ctx, buffer.c_str(), buffer.length());
+        return 1;
+    }
+    catch (const Exception & e)
+    {
+        log_error("%s\n", e.getMessage().c_str());
+        e.printStackTrace();
+    }
+
+    return 0;
+}
+#endif
 
 static duk_ret_t convert_charset_generic(duk_context *ctx, charset_convert_t chr)
 {
