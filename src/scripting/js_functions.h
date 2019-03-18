@@ -46,6 +46,11 @@ duk_ret_t js_addCdsObject(duk_context *ctx);
 /// \brief Makes a copy of an CDS object.
 duk_ret_t js_copyObject(duk_context *ctx);
 
+#ifdef HAVE_CURL
+/// \brief Perform HTTP GET request and return response.
+duk_ret_t js_doHttpGet(duk_context *ctx);
+#endif
+
 /// filesystem charset to internal
 duk_ret_t js_f2i(duk_context *ctx);
 /// metadata charset to internal
