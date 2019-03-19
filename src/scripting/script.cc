@@ -51,6 +51,7 @@ static duk_function_list_entry js_global_functions[] =
     { "print",          js_print,        DUK_VARARGS },
     { "addCdsObject",   js_addCdsObject, 3 },
     { "copyObject",     js_copyObject,   1 },
+    { "doSystemCommand", js_doSystemCommand, 1 },
 #ifdef HAVE_CURL
     { "doHttpGet",      js_doHttpGet,    1 },
 #endif
