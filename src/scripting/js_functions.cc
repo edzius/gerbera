@@ -46,6 +46,9 @@
 #include <curl/curl.h>
 #endif
 
+#include <stdio.h>
+#include <stdlib.h>
+
 using namespace zmm;
 
 //extern "C" {
@@ -243,6 +246,97 @@ duk_ret_t js_addCdsObject(duk_context *ctx)
         log_error("%s\n", e.getMessage().c_str());
         e.printStackTrace();
     }
+    return 0;
+}
+
+duk_ret_t js_doSystemCommand(duk_context *ctx)
+{
+#define BUFSIZ_INC 4096
+    FILE *fp;
+    int nread;
+    int ncount = 0;
+    int bufsize = 0;
+    char *buffer = NULL;
+    char *buftemp;
+    const char *cmd = duk_to_string(ctx, 0);
+    if (!cmd)
+        return duk_error(ctx, DUK_ERR_TYPE_ERROR, "doExternalCommand argument is valid command string");
+
+    bufsize += BUFSIZ_INC;
+    buffer = (char *)calloc(1, bufsize);
+    if (!buffer) {
+        log_error("calloc() failed; oh well...\n");
+        return 0;
+    }
+
+    log_debug("EXECUTING CMD: %s\n", cmd);
+
+#ifdef _WIN32
+    /* Run DIR so that it writes its output to a pipe. Open this
+     * pipe with read text attribute so that we can read it
+     * like a text file.
+     */
+
+    fp = _popen(cmd, "rt")
+    if (fp == NULL) {
+        log_error("Failed to run command: %s\n", cmd);
+        return 0;
+    }
+#else
+    fp = popen(cmd, "r");
+    if (fp == NULL) {
+        log_error("Failed to run command: %s\n", cmd);
+        return 0;
+    }
+#endif
+
+    while (1) {
+        nread = fread(buffer + ncount, 1, bufsize - ncount, fp);
+        printf("READ %i/%i\n", nread, bufsize);
+        if (ferror(fp)) {
+            log_error("Error reading output of command: %s\n", cmd);
+            break;
+        }
+
+        ncount += nread;
+
+        if (nread == 0 || feof(fp)) {
+            break;
+        }
+
+        if (ncount >= bufsize) {
+            bufsize += BUFSIZ_INC;
+            buftemp = (char *)realloc(buffer, bufsize);
+            if (!buftemp) {
+                free(buffer);
+                log_error("realloc() failed; oh well...\n");
+                return 0;
+            }
+            buffer = buftemp;
+        }
+    }
+
+#ifdef _WIN32
+    _pclose(fp);
+#else
+    pclose(fp);
+#endif
+
+    log_debug("GOT BUFFER\n%s\n", buffer);
+
+    try
+    {
+        duk_push_lstring(ctx, buffer, ncount);
+        free(buffer);
+        return 1;
+    }
+    catch (const Exception & e)
+    {
+        log_error("%s\n", e.getMessage().c_str());
+        e.printStackTrace();
+    }
+
+    free(buffer);
     return 0;
 }
 
