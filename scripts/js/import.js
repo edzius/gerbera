@@ -163,6 +163,250 @@ function addAudio(obj) {
     addCdsObject(obj, createContainerChain(chain), UPNP_CLASS_CONTAINER_MUSIC_COMPOSER);
 }
 
+var regexExt = /^(mkv|avi|mp4)$/i;
+var regexLang = /^(LT|EN|RU)/i;
+var regexSubs = /([A-Z]*sub)/i;
+var regexYear = /^\(?(\d\d\d\d)\)?$/;
+var regexCode = /^(x264|h264|web\-?rip|web\-?dl|web\-?dlrip|dvd\-?rip|b[dr]\-?rip|hd\-?rip|hdtv|720p|1080p|avc|aac|ac3|dts|divx|xvid|bluray)$/i;
+var regexTime = /(\d+):(\d+):(\d+)/;
+var regexView = /(\d+)x(\d+)/;
+var regexSeason = /^S(\d+)/i;
+var regexEpisode = /E(\d+)$/i;
+
+function matchFileExt(value) {
+    if (value.length < 3 || value.length > 4)
+        return;
+    var ret = value.match(regexExt);
+    if (ret)
+        return ret[1];
+}
+
+function matchLanguage(value) {
+    if (value.length < 2 || value.length > 3)
+        return;
+    var ret = value.match(regexLang);
+    if (ret)
+        return ret[1];
+}
+
+function matchSubtitres(value) {
+    var ret = value.match(regexSubs);
+    if (ret)
+        return ret[1];
+}
+
+function matchYear(value) {
+    var ret = value.match(regexYear);
+    if (ret)
+        return ret[1];
+}
+
+function matchCoding(value) {
+    var ret = value.match(regexCode);
+    if (ret)
+        return ret[1];
+}
+
+function matchSeason(value) {
+    var ret = value.match(regexSeason);
+    if (ret)
+        return ret[1];
+}
+
+function matchEpisode(value) {
+    var ret = value.match(regexEpisode);
+    if (ret)
+        return ret[1];
+}
+
+function processNameArray(arr) {
+    var ret = {};
+    var lastId;
+
+    for (var i = arr.length - 1; i >= 0; i--) {
+        var val = arr[i];
+        var ext = matchFileExt(val);
+        var lang = matchLanguage(val);
+        var subs = matchSubtitres(val);
+        var year = matchYear(val);
+        var code = matchCoding(val);
+        var season = matchSeason(val);
+        var episode = matchEpisode(val);
+        if (!ret.ext && ext) {
+            ret.ext = ext
+            lastId = i;
+        }
+        if (lang) {
+            ret.lang = ret.lang || [];
+            ret.lang.push(lang);
+            lastId = i;
+        }
+        if (subs) {
+            ret.subs = ret.subs || [];
+            ret.subs.push(subs);
+            lastId = i;
+        }
+        if (!ret.year && year) {
+            ret.year = year;
+            lastId = i;
+        }
+        if (code) {
+            ret.code = ret.code || [];
+            ret.code.push(code);
+            lastId = i;
+        }
+        if (!ret.season && season) {
+            ret.season = season;
+            lastId = i;
+        }
+        if (!ret.episode && episode) {
+            ret.episode = episode;
+            lastId = i;
+        }
+    }
+
+    ret.ok = !!lastId;
+
+    if (lastId) {
+        ret.title = arr.slice(0, lastId).join(' ');
+    }
+
+    if (obj.res && obj.res.duration) {
+        var res = obj.res.duration.match(regexTime);
+        if (res)
+            ret.duration = new Date(null, null, null, res[1], res[2], res[3]);
+    }
+
+    if (obj.res && obj.res.resolution) {
+        var res = obj.res.resolution.match(regexView);
+        if (res)
+            ret.resolution = {
+                width: +res[1],
+                height: +res[2],
+            };
+    }
+
+    return ret;
+}
+
+function partitionName(name) {
+    if (!name)
+        return name;
+    return name.split(/[ \.\-_]/);
+}
+
+function processLocation(path) {
+    var parts = path.split('/');
+    if (parts.length < 2)
+        return;
+
+    return parts[parts.length - 2];
+}
+
+function getMovieInfo(obj) {
+    var label;
+    var parts;
+    var infoDir;
+    var infoDat;
+
+    label = processLocation(obj.location);
+    parts = partitionName(label);
+    if (parts) {
+        infoDir = processNameArray(parts);
+        if (infoDir.ok)
+            print('Usable direcotry: ', label);
+    }
+
+    parts = partitionName(obj.title);
+    if (parts) {
+        infoDat = processNameArray(parts);
+        if (!infoDat.ok)
+            print('Cannot parse "', obj.title, '"');
+    }
+
+    if (!infoDir && !infoDat) {
+        print('Cannot parse "', obj.title, '", "', label, '"');
+        return {};
+    }
+
+    var result = infoDir || {};
+    if (infoDir && infoDir.ok)
+        result.dir = label;
+    for (var key in infoDat) {
+        if (!result[key])
+            result[key] = infoDat[key];
+    }
+    return result;
+}
+
+function addMovie(obj, mov) {
+    if (!mov.title) {
+        chain = ['Movies', 'Unsorted'];
+        addCdsObject(obj, createContainerChain(chain));
+        return;
+    } else {
+        chain = ['Movies', 'List'];
+        addCdsObject(obj, createContainerChain(chain));
+    }
+
+    if (mov.year) {
+        chain = ['Movies', 'Year', mov.year];
+        addCdsObject(obj, createContainerChain(chain));
+    } else {
+        chain = ['Movies', 'Year', 'Unsorted'];
+        addCdsObject(obj, createContainerChain(chain));
+    }
+
+    if (mov.duration) {
+        if (mov.duration.getHours() >= 3) {
+            chain = ['Movies', 'Duration', '3 Hour'];
+        } else if (mov.duration.getHours() >= 2 && mov.duration.getMinutes() >= 30) {
+            chain = ['Movies', 'Duration', '2.5 Hour'];
+        } else if (mov.duration.getHours() >= 2 && mov.duration.getMinutes() >= 0) {
+            chain = ['Movies', 'Duration', '2 Hour'];
+        } else if (mov.duration.getHours() >= 1 && mov.duration.getMinutes() >= 30) {
+            chain = ['Movies', 'Duration', '1.5 Hour'];
+        } else {
+            chain = ['Movies', 'Duration', '1 Hour'];
+        }
+        addCdsObject(obj, createContainerChain(chain));
+    } else {
+        chain = ['Movies', 'Duration', 'Unsorted'];
+        addCdsObject(obj, createContainerChain(chain));
+    }
+
+    if (mov.resolution) {
+        if (mov.resolution.height >= 1080) {
+            chain = ['Movies', 'Resolution', '1080p'];
+            addCdsObject(obj, createContainerChain(chain));
+        } else if (mov.resolution.height >= 720) {
+            chain = ['Movies', 'Resolution', '720p'];
+            addCdsObject(obj, createContainerChain(chain));
+        } else {
+            chain = ['Movies', 'Resolution', '*VGA'];
+            addCdsObject(obj, createContainerChain(chain));
+        }
+    } else {
+        chain = ['Movies', 'Resolution', 'Unsorted'];
+        addCdsObject(obj, createContainerChain(chain));
+    }
+}
+
+function addSerie(obj, mov) {
+    if (!mov.dir) {
+        if (!mov.title) {
+            chain = ['Series', 'Unsorted'];
+            addCdsObject(obj, createContainerChain(chain));
+            return;
+        }
+        chain = ['Series', 'List', mov.title + ' ' + mov.season + (mov.year ? (' ' + mov.year) : '')];
+        addCdsObject(obj, createContainerChain(chain));
+    } else {
+        chain = ['Series', 'List', mov.dir];
+        addCdsObject(obj, createContainerChain(chain));
+    }
+}
+
 function addVideo(obj) {
     var chain = ['Video', 'All Video'];
     addCdsObject(obj, createContainerChain(chain));
@@ -174,6 +418,12 @@ function addVideo(obj) {
         chain = chain.concat(dir);
         addCdsObject(obj, createContainerChain(chain));
     }
+
+    var mov = getMovieInfo(obj);
+    if (mov.season || mov.episode)
+        addSerie(obj, mov);
+    else
+        addMovie(obj, mov);
 }
 
 function addImage(obj) {
