@@ -201,3 +201,33 @@ function abcbox(stringtobox, boxtype, divchar)
 	output = output + divchar;
 	return output;
 }
+
+function httpGetJson(url, params) {
+  if (!doHttpGet || !urlEncode || !url)
+    return;
+
+  if (url[url.length - 1] !== '/')
+    url += '/';
+
+  var query = '';
+  for (var key in params) {
+    query += key + '=' + urlEncode(params[key]);
+  }
+
+  if (query.length > 0)
+    url += '?' + query;
+
+  var response = doHttpGet(url);
+  if (!response) {
+    print('No HTTP response to: ' + url);
+    return;
+  }
+
+  var result = JSON.parse(response);
+  if (!result) {
+    print('Bad JSON response "' + response + '" to: ' + url);
+    return;
+  }
+
+  return result;
+}
