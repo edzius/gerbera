@@ -355,7 +355,117 @@ function addMovie(obj, info) {
 }
 
 function addEpisode(obj, info) {
-  print('episode', JSON.stringify(info));
+    var chain;
+
+    /**
+     * Series.List.<Series-Seasons>.*
+     * Series.Year.<Year>.<Series>.<Season>.*
+     * Series.Duration.<Duration>.<Series>.<Seasons>.*
+     * Series.Seasons.<Seasons>.<Series>.<Seasons>.*
+     * Series.Episodes.<Episodes>.<Series>.*
+     * Series.Rating.<Rating>.<Series>.<Seasons>.*
+     * Series.Votes.<Votes>.<Series>.<Seasons>.*
+     * Series.Genre.<Genre>.<Series>.<Seasons>.*
+     * Series.Completed.<Series>.<Seasons>.*
+     */
+
+    var title = info.title
+    var season = info.episode ? ('S' + info.episode.season) : undefined;
+
+    if (info.title) {
+        chain = ['Series', 'List', info.title + ' S' + (info.episode && info.episode.season || 'XX')];
+        addCdsObject(obj, createContainerChain(chain));
+    } else {
+        chain = ['Series', 'List', 'Unsorted'];
+        addCdsObject(obj, createContainerChain(chain));
+    }
+
+    if (info.year) {
+        chain = ['Series', 'Year', '' + info.year, title, season];
+        addCdsObject(obj, createContainerChain(chain));
+    } else {
+        chain = ['Series', 'Year', 'Unsorted', title, season];
+        addCdsObject(obj, createContainerChain(chain));
+    }
+
+    if (info.duration) {
+        if (info.duration < 15) {
+            chain = ['Series', 'Duration', 'Short', title, season];
+        } else if (info.duration >= 15 && info.duration < 30) {
+            chain = ['Series', 'Duration', '~30 Minutes', title, season];
+        } else if (info.duration >= 30 && info.duration < 45) {
+            chain = ['Series', 'Duration', '~45 Minutes', title, season];
+        } else if (info.duration >= 45) {
+            chain = ['Series', 'Duration', 'Loong', title, season];
+        }
+        addCdsObject(obj, createContainerChain(chain));
+    } else {
+        chain = ['Series', 'Duration', 'Unsorted', title, season];
+        addCdsObject(obj, createContainerChain(chain));
+    }
+
+    if (info.seasons) {
+        chain = ['Series', 'Seasons', '' + info.seasons, title, season];
+        addCdsObject(obj, createContainerChain(chain));
+    } else {
+        chain = ['Series', 'Seasons', 'Unsorted', title, season];
+        addCdsObject(obj, createContainerChain(chain));
+    }
+
+    if (info.imdbRating) {
+        chain = ['Series', 'Rating', '' + info.imdbRating, title, season];
+        addCdsObject(obj, createContainerChain(chain));
+    } else {
+        chain = ['Series', 'Rating', 'Unsorted', title, season];
+        addCdsObject(obj, createContainerChain(chain));
+    }
+
+    if (info.imdbVotes) {
+        if (info.imdbVotes >= 500000) {
+            chain = ['Series', 'Votes', '500000+', title, season];
+        } else if (info.imdbVotes >= 400000) {
+            chain = ['Series', 'Votes', '400000+', title, season];
+        } else if (info.imdbVotes >= 300000) {
+            chain = ['Series', 'Votes', '300000+', title, season];
+        } else if (info.imdbVotes >= 200000) {
+            chain = ['Series', 'Votes', '200000+', title, season];
+        } else if (info.imdbVotes >= 100000) {
+            chain = ['Series', 'Votes', '100000+', title, season];
+        } else if (info.imdbVotes >= 70000) {
+            chain = ['Series', 'Votes', '70000+', title, season];
+        } else if (info.imdbVotes >= 30000) {
+            chain = ['Series', 'Votes', '30000+', title, season];
+        } else if (info.imdbVotes >= 10000) {
+            chain = ['Series', 'Votes', '10000+', title, season];
+        } else if (info.imdbVotes >= 7000) {
+            chain = ['Series', 'Votes', '7000+', title, season];
+        } else if (info.imdbVotes >= 3000) {
+            chain = ['Series', 'Votes', '3000+', title, season];
+        } else if (info.imdbVotes >= 1000) {
+            chain = ['Series', 'Votes', '1000+', title, season];
+        } else {
+            chain = ['Series', 'Votes', 'Defunct', title, season];
+        }
+        addCdsObject(obj, createContainerChain(chain));
+    } else {
+        chain = ['Series', 'Votes', 'Unsorted', title, season];
+        addCdsObject(obj, createContainerChain(chain));
+    }
+
+    if (info.genre) {
+        info.genre.forEach(function (genre) {
+            chain = ['Series', 'Genre', '' + genre, title, season];
+            addCdsObject(obj, createContainerChain(chain));
+        });
+    } else {
+        chain = ['Series', 'Genre', 'Unsorted', title, season];
+        addCdsObject(obj, createContainerChain(chain));
+    }
+
+    if (info.complete) {
+        chain = ['Series', 'Completed', title, season];
+        addCdsObject(obj, createContainerChain(chain));
+    }
 }
 
 function addVideoCategory(obj) {
@@ -380,9 +490,10 @@ function addVideoCategory(obj) {
     var minfo = {
         type: movie.type,
         title: movie.title,
-        season: +movie.season,
-        episode: +movie.episode,
         year: +movie.year,
+        complete: null,
+        seasons: null,
+        episodes: null,
         duration: null,
         dimensions: null,
         genre: [],
@@ -391,9 +502,26 @@ function addVideoCategory(obj) {
         certified: null,
         imdbRating: null,
         imdbVotes: null,
+        episode: {
+          title: null,
+          season: +movie.season,
+          episode: +movie.episode,
+          year: null,
+          duration: null,
+          dimensions: null,
+          genre: [],
+          director: [],
+          writer: [],
+          certified: null,
+          imdbRating: null,
+          imdbVotes: null,
+        }
     };
 
-    if (movie.res) {
+    if (movie.res && movie.type === 'episode') {
+        minfo.episode.duration = movie.res.duration;
+        minfo.episode.dimensions = movie.res.dimensions;
+    } else {
         minfo.duration = movie.res.duration;
         minfo.dimensions = movie.res.dimensions;
     }
@@ -401,9 +529,15 @@ function addVideoCategory(obj) {
     if (movie.ext) {
         minfo.type = movie.ext.type;
         minfo.title = movie.ext.title;
-        mtmp = +movie.ext.year;
-        if (mtmp)
-            minfo.year = mtmp;
+        mtmp = (movie.ext.year || '').match(/(\d+)(?:\-(\d+))?/);
+        if (mtmp) {
+            minfo.year = +mtmp[0];
+            minfo.complete = +mtmp[1];
+        }
+        if (minfo.complete) {
+            minfo.seasons = movie.ext.total_seasons;
+            minfo.episodes = movie.ext.total_episodes; // Hypothetic nonexisting property
+        }
         mtmp = (movie.ext.runtime || '').match(/(\d+)/)
         if (mtmp)
             minfo.duration = +mtmp[0];
@@ -420,6 +554,29 @@ function addVideoCategory(obj) {
         });
         minfo.imdbRating = +movie.ext.imdb_rating;
         minfo.imdbVotes = +(movie.ext.imdb_votes || '').replace(',', '');
+
+        if (movie.ext.specific) {
+            minfo.episode.title = movie.ext.specific.title;
+            mtmp = +movie.ext.specific.year;
+            if (mtmp)
+                minfo.episode.year = mtmp;
+            mtmp = (movie.ext.specific.runtime || '').match(/(\d+)/)
+            if (mtmp)
+                minfo.episode.duration = +mtmp[0];
+            minfo.episode.certified = movie.ext.specific.rated;
+            minfo.episode.genre = (movie.ext.specific.genre || '').split(/, /);
+            minfo.episode.director = (movie.ext.specific.director || '').split(/, /);
+            minfo.episode.writer = (movie.ext.specific.writer || '').split(/, /).map(function (writer) {
+                var name = writer.match(/[^\(\[\)\]]+/);
+                if (!name)
+                    return;
+                return name[0].trim();
+            }).filter(function (writer) {
+                return !!writer;
+            });
+            minfo.episode.imdbRating = +movie.ext.specific.imdb_rating;
+            minfo.episode.imdbVotes = +(movie.ext.specific.imdb_votes || '').replace(',', '');
+        }
     }
 
     switch (minfo.type) {
