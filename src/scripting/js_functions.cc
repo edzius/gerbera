@@ -354,7 +354,7 @@ duk_ret_t js_doHttpGet(duk_context *ctx)
     try {
         log_debug("DOWNLOADING URL: %s\n", requrl);
         buffer = url->download(_(requrl), &retcode,
-            nullptr, false, true, true);
+            nullptr, false, false, true);
 
     } catch (const Exception& ex) {
         log_error("Failed to GET HTTP request: %s\n",
