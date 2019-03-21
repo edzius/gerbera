@@ -54,6 +54,7 @@ static duk_function_list_entry js_global_functions[] =
     { "doSystemCommand", js_doSystemCommand, 1 },
 #ifdef HAVE_CURL
     { "doHttpGet",      js_doHttpGet,    1 },
+    { "urlEncode",      js_urlEncode,    1 },
 #endif
     { "f2i",            js_f2i,          1 },
     { "m2i",            js_m2i,          1 },

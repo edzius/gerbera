@@ -52,6 +52,9 @@ duk_ret_t js_doSystemCommand(duk_context *ctx);
 #ifdef HAVE_CURL
 /// \brief Perform HTTP GET request and return response.
 duk_ret_t js_doHttpGet(duk_context *ctx);
+
+/// \brief URL encodes provided string.
+duk_ret_t js_urlEncode(duk_context *ctx);
 #endif
 
 /// filesystem charset to internal
