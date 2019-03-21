@@ -387,6 +387,28 @@ duk_ret_t js_doHttpGet(duk_context *ctx)
 
     return 0;
 }
+
+duk_ret_t js_urlEncode(duk_context *ctx)
+{
+    CURL* curl;
+    char *surl;
+    const char *requrl = duk_to_string(ctx, 0);
+    if (!requrl)
+        return duk_error(ctx, DUK_ERR_TYPE_ERROR, "urlEncode argument is not string");
+
+    curl = curl_easy_init();
+    if (curl == nullptr)
+        return 0;
+
+    surl = curl_easy_escape(curl, requrl, strlen(requrl));
+    curl_easy_cleanup(curl);
+    if (!surl)
+        return 0;
+
+    duk_push_lstring(ctx, surl, strlen(surl));
+    curl_free(surl);
+    return 1;
+}
 #endif
 
 static duk_ret_t convert_charset_generic(duk_context *ctx, charset_convert_t chr)
