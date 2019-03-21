@@ -480,7 +480,7 @@ function addVideoCategory(obj) {
 
     var movie = JSON.parse(response)
     if (!movie) {
-        print('Failed to parse: ', response);
+        print('Failed to parse `', response, '` response for: ', obj.location);
         return;
     }
 
