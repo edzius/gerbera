@@ -164,7 +164,7 @@ function addAudio(obj) {
 }
 
 // Locally served guessit server
-var VIDEO_GUESSIT_URL = 'http://localhost:5000/'
+var VIDEO_GUESSIT_URL = getEnv('GUESSIT_URL') || 'http://localhost:5000/';
 
 var VIDEO_TIME_METRIC_RE = /(\d+):(\d+):(\d+)/;
 var VIDEO_DIM_METRIC_RE = /(\d+)x(\d+)/;
