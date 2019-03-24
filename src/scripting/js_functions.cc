@@ -249,6 +249,21 @@ duk_ret_t js_addCdsObject(duk_context *ctx)
     return 0;
 }
 
+duk_ret_t js_getEnv(duk_context *ctx)
+{
+    char *val;
+    const char *key = duk_to_string(ctx, 0);
+    if (!key)
+        return duk_error(ctx, DUK_ERR_TYPE_ERROR, "getEnv argument is not string");
+
+    val = getenv(key);
+    if (!val)
+        return 0;
+
+    duk_push_lstring(ctx, val, strlen(val));
+    return 1;
+}
+
 duk_ret_t js_doSystemCommand(duk_context *ctx)
 {
 #define BUFSIZ_INC 4096

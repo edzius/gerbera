@@ -46,6 +46,9 @@ duk_ret_t js_addCdsObject(duk_context *ctx);
 /// \brief Makes a copy of an CDS object.
 duk_ret_t js_copyObject(duk_context *ctx);
 
+/// \brief Retrieves environment variable value.
+duk_ret_t js_getEnv(duk_context *ctx);
+
 /// \brief Run system command and return output.
 duk_ret_t js_doSystemCommand(duk_context *ctx);
 
