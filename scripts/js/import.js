@@ -480,6 +480,10 @@ function addVideoCategory(obj) {
         print('Categorize video skipped, too short: ', obj.location);
         return;
     }
+    if (!res.dimensions) {
+        print('Categorize video skipped, no dimensions: ', obj.location);
+        return;
+    }
 
     var response = doHttpGet(VIDEO_GUESSIT_URL + '?options=-Llt&filename=' + urlEncode(obj.location));
     if (!response) {
