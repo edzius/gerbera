@@ -594,8 +594,10 @@ function addVideoCategory(obj) {
 
     switch (minfo.type) {
         case 'movie':
-            if (res.duration && res.duration <= 45)
+            if (res.duration && res.duration <= 45) {
+                print('Categorize movie skipped, too short: ', obj.location);
                 return;
+            }
             addMovie(obj, minfo);
             break;
         case 'series':
