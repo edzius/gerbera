@@ -169,22 +169,25 @@ var VIDEO_GUESSIT_URL = getEnv('GUESSIT_URL') || 'http://localhost:5000/';
 var VIDEO_TIME_METRIC_RE = /(\d+):(\d+):(\d+)/;
 var VIDEO_DIM_METRIC_RE = /(\d+)x(\d+)/;
 
-function grabVideoMetrics(obj, out) {
-    out.res = {};
+function grabVideoMetrics(obj) {
+    var out = {}
+
     if (obj.res && obj.res.duration) {
         var res = obj.res.duration.match(VIDEO_TIME_METRIC_RE);
         if (res)
-            out.res.duration = (+res[1] * 60) + (+res[2]) + (+res[3] > 0 ? 1 : 0);
+            out.duration = (+res[1] * 60) + (+res[2]) + (+res[3] > 0 ? 1 : 0);
     }
 
     if (obj.res && obj.res.resolution) {
         var res = obj.res.resolution.match(VIDEO_DIM_METRIC_RE);
         if (res)
-            out.res.dimensions = {
+            out.dimensions = {
                 width: +res[1],
                 height: +res[2],
             };
     }
+
+    return out;
 }
 
 function addMovie(obj, info) {
@@ -472,6 +475,12 @@ function addVideoCategory(obj) {
     if (!doHttpGet || !urlEncode)
         return;
 
+    var res = grabVideoMetrics(obj);
+    if (res.duration && res.duration <= 10) {
+        print('Categorize video skipped, too short: ', obj.location);
+        return;
+    }
+
     var response = doHttpGet(VIDEO_GUESSIT_URL + '?options=-Llt&filename=' + urlEncode(obj.location));
     if (!response) {
         print('Failed to inspect: ', obj.location);
@@ -484,7 +493,7 @@ function addVideoCategory(obj) {
         return;
     }
 
-    grabVideoMetrics(obj, movie);
+    print('Categorizing video ' + obj.mimetype + ' file ' + obj.location);
 
     var mtmp;
     var minfo = {
@@ -519,11 +528,11 @@ function addVideoCategory(obj) {
     };
 
     if (movie.res && movie.type === 'episode') {
-        minfo.episode.duration = movie.res.duration;
-        minfo.episode.dimensions = movie.res.dimensions;
+        minfo.episode.duration = res.duration;
+        minfo.episode.dimensions = res.dimensions;
     } else {
-        minfo.duration = movie.res.duration;
-        minfo.dimensions = movie.res.dimensions;
+        minfo.duration = res.duration;
+        minfo.dimensions = res.dimensions;
     }
 
     if (movie.ext) {
@@ -581,6 +590,8 @@ function addVideoCategory(obj) {
 
     switch (minfo.type) {
         case 'movie':
+            if (res.duration && res.duration <= 45)
+                return;
             addMovie(obj, minfo);
             break;
         case 'series':
