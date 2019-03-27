@@ -602,7 +602,12 @@ function addVideoCategory(obj) {
             break;
         case 'series':
         case 'episode':
-            addEpisode(obj, minfo);
+            if (minfo.episode && minfo.episode.episode) {
+                addEpisode(obj, minfo);
+            } else {
+                print('[video] Confusing item - no episode information; file: ', obj.location);
+                addMovie(obj, minfo);
+            }
             break;
     }
 }
