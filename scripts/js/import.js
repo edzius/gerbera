@@ -477,27 +477,27 @@ function addVideoCategory(obj) {
 
     var res = grabVideoMetrics(obj);
     if (res.duration && res.duration <= 10) {
-        print('Categorize video skipped, too short: ', obj.location);
+        print('[video] Skipping item - too short (<10); file: ', obj.location);
         return;
     }
     if (!res.dimensions) {
-        print('Categorize video skipped, no dimensions: ', obj.location);
+        print('[video] Skipping item - no dimensions; file: ', obj.location);
         return;
     }
 
     var response = doHttpGet(VIDEO_GUESSIT_URL + '?options=-Llt&filename=' + urlEncode(obj.location));
     if (!response) {
-        print('Failed to inspect: ', obj.location);
+        print('[video] Skipping item - no HTTP response; file: ', obj.location);
         return;
     }
 
     var movie = JSON.parse(response)
     if (!movie) {
-        print('Failed to parse `', response, '` response for: ', obj.location);
+        print('[video] Skipping item - bad HTTP response `', response, '`; file: ', obj.location);
         return;
     }
 
-    print('Categorizing video ' + obj.mimetype + ' file ' + obj.location);
+    //print('[video] Processing item; file: ', obj.location, ' (' + obj.mimetype + ')');
 
     var mtmp;
     var minfo = {
@@ -595,7 +595,7 @@ function addVideoCategory(obj) {
     switch (minfo.type) {
         case 'movie':
             if (res.duration && res.duration <= 45) {
-                print('Categorize movie skipped, too short: ', obj.location);
+                print('[video] Skipping item - too short (<45); file: ', obj.location);
                 return;
             }
             addMovie(obj, minfo);
