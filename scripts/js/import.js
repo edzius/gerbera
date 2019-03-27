@@ -206,6 +206,8 @@ function addMovie(obj, info) {
      * Movies.Writer.<Writer>.*
      */
 
+    var title = '' + info.title || 'Untitled'
+
     if (info.title) {
         chain = ['Movies', 'List', '[' + (info.year || 'XXXX') + '] ' + info.title];
         addCdsObject(obj, createContainerChain(chain));
@@ -215,144 +217,144 @@ function addMovie(obj, info) {
     }
 
     if (info.year) {
-        chain = ['Movies', 'Year', '' + info.year];
+        chain = ['Movies', 'Year', '' + info.year, title];
         addCdsObject(obj, createContainerChain(chain));
     } else {
-        chain = ['Movies', 'Year', 'Unsorted'];
+        chain = ['Movies', 'Year', 'Unsorted', title];
         addCdsObject(obj, createContainerChain(chain));
     }
 
     if (info.duration) {
         if (info.duration < 30) {
-            chain = ['Movies', 'Duration', 'Short'];
+            chain = ['Movies', 'Duration', 'Short', title];
         } else if (info.duration >= 30 && info.duration < 90) {
-            chain = ['Movies', 'Duration', '~1 Hour'];
+            chain = ['Movies', 'Duration', '~1 Hour', title];
         } else if (info.duration >= 90 && info.duration < 150) {
-            chain = ['Movies', 'Duration', '~2 Hours'];
+            chain = ['Movies', 'Duration', '~2 Hours', title];
         } else if (info.duration >= 150 && info.duration < 210) {
-            chain = ['Movies', 'Duration', '~3 Hours'];
+            chain = ['Movies', 'Duration', '~3 Hours', title];
         } else if (info.duration >= 210) {
-            chain = ['Movies', 'Duration', 'Loong'];
+            chain = ['Movies', 'Duration', 'Loong', title];
         }
         addCdsObject(obj, createContainerChain(chain));
     } else {
-        chain = ['Movies', 'Duration', 'Unsorted'];
+        chain = ['Movies', 'Duration', 'Unsorted', title];
         addCdsObject(obj, createContainerChain(chain));
     }
 
     if (info.dimensions) {
         if (info.dimensions.width <= 640 && info.dimensions.height <= 360) {
-            chain = ['Movies', 'Quality', 'nHD (640x360)'];
+            chain = ['Movies', 'Quality', 'nHD (640x360)', title];
         } else if (info.dimensions.width <= 800 && info.dimensions.height <= 600) {
-            chain = ['Movies', 'Quality', 'SVGA (800x600)'];
+            chain = ['Movies', 'Quality', 'SVGA (800x600)', title];
         } else if (info.dimensions.width <= 1024 && info.dimensions.height <= 768) {
-            chain = ['Movies', 'Quality', 'XGA (1024x768)'];
+            chain = ['Movies', 'Quality', 'XGA (1024x768)', title];
         } else if (info.dimensions.width <= 1280 && info.dimensions.height <= 800) {
-            chain = ['Movies', 'Quality', 'WXGA (1280x800)'];
+            chain = ['Movies', 'Quality', 'WXGA (1280x800)', title];
         } else if (info.dimensions.width <= 1280 && info.dimensions.height <= 1024) {
-            chain = ['Movies', 'Quality', 'SXGA (1280x1024)'];
+            chain = ['Movies', 'Quality', 'SXGA (1280x1024)', title];
         } else if (info.dimensions.width <= 1360 && info.dimensions.height <= 768) {
-            chain = ['Movies', 'Quality', 'HD (1360x768)'];
+            chain = ['Movies', 'Quality', 'HD (1360x768)', title];
         } else if (info.dimensions.width <= 1440 && info.dimensions.height <= 900) {
-            chain = ['Movies', 'Quality', 'WXGA+ (1440x900)'];
+            chain = ['Movies', 'Quality', 'WXGA+ (1440x900)', title];
         } else if (info.dimensions.width <= 1600 && info.dimensions.height <= 900) {
-            chain = ['Movies', 'Quality', 'HD+ (1600x900)'];
+            chain = ['Movies', 'Quality', 'HD+ (1600x900)', title];
         } else if (info.dimensions.width <= 1680 && info.dimensions.height <= 1050) {
-            chain = ['Movies', 'Quality', 'WSXGA+ (1680x1050)'];
+            chain = ['Movies', 'Quality', 'WSXGA+ (1680x1050)', title];
         } else if (info.dimensions.width <= 1920 && info.dimensions.height <= 1080) {
-            chain = ['Movies', 'Quality', 'FHD (1920x1080)'];
+            chain = ['Movies', 'Quality', 'FHD (1920x1080)', title];
         } else if (info.dimensions.width <= 1920 && info.dimensions.height <= 1200) {
-            chain = ['Movies', 'Quality', 'WUXGA (1920x1200)'];
+            chain = ['Movies', 'Quality', 'WUXGA (1920x1200)', title];
         } else if (info.dimensions.width <= 2048 && info.dimensions.height <= 1152) {
-            chain = ['Movies', 'Quality', 'QWXGA (2048x1152)'];
+            chain = ['Movies', 'Quality', 'QWXGA (2048x1152)', title];
         } else if (info.dimensions.width <= 2560 && info.dimensions.height <= 1440) {
-            chain = ['Movies', 'Quality', 'QHD (2560x1440)'];
+            chain = ['Movies', 'Quality', 'QHD (2560x1440)', title];
         } else if (info.dimensions.width <= 3840 && info.dimensions.height <= 2160) {
-            chain = ['Movies', 'Quality', '4K UHD (3840x2160)'];
+            chain = ['Movies', 'Quality', '4K UHD (3840x2160)', title];
         } else {
-            chain = ['Movies', 'Quality', 'Other'];
+            chain = ['Movies', 'Quality', 'Other', title];
         }
         addCdsObject(obj, createContainerChain(chain));
     } else {
-        chain = ['Movies', 'Quality', 'Unsorted'];
+        chain = ['Movies', 'Quality', 'Unsorted', title];
         addCdsObject(obj, createContainerChain(chain));
     }
 
     if (info.certified) {
-        chain = ['Movies', 'Certified', '' + info.certified];
+        chain = ['Movies', 'Certified', '' + info.certified, title];
         addCdsObject(obj, createContainerChain(chain));
     } else {
-        chain = ['Movies', 'Certified', 'Unsorted'];
+        chain = ['Movies', 'Certified', 'Unsorted', title];
         addCdsObject(obj, createContainerChain(chain));
     }
 
     if (info.imdbRating) {
-        chain = ['Movies', 'Rating', '' + info.imdbRating];
+        chain = ['Movies', 'Rating', '' + info.imdbRating, title];
         addCdsObject(obj, createContainerChain(chain));
     } else {
-        chain = ['Movies', 'Rating', 'Unsorted'];
+        chain = ['Movies', 'Rating', 'Unsorted', title];
         addCdsObject(obj, createContainerChain(chain));
     }
 
     if (info.imdbVotes) {
         if (info.imdbVotes >= 500000) {
-            chain = ['Movies', 'Votes', '500000+'];
+            chain = ['Movies', 'Votes', '500000+', title];
         } else if (info.imdbVotes >= 400000) {
-            chain = ['Movies', 'Votes', '400000+'];
+            chain = ['Movies', 'Votes', '400000+', title];
         } else if (info.imdbVotes >= 300000) {
-            chain = ['Movies', 'Votes', '300000+'];
+            chain = ['Movies', 'Votes', '300000+', title];
         } else if (info.imdbVotes >= 200000) {
-            chain = ['Movies', 'Votes', '200000+'];
+            chain = ['Movies', 'Votes', '200000+', title];
         } else if (info.imdbVotes >= 100000) {
-            chain = ['Movies', 'Votes', '100000+'];
+            chain = ['Movies', 'Votes', '100000+', title];
         } else if (info.imdbVotes >= 70000) {
-            chain = ['Movies', 'Votes', '70000+'];
+            chain = ['Movies', 'Votes', '70000+', title];
         } else if (info.imdbVotes >= 30000) {
-            chain = ['Movies', 'Votes', '30000+'];
+            chain = ['Movies', 'Votes', '30000+', title];
         } else if (info.imdbVotes >= 10000) {
-            chain = ['Movies', 'Votes', '10000+'];
+            chain = ['Movies', 'Votes', '10000+', title];
         } else if (info.imdbVotes >= 7000) {
-            chain = ['Movies', 'Votes', '7000+'];
+            chain = ['Movies', 'Votes', '7000+', title];
         } else if (info.imdbVotes >= 3000) {
-            chain = ['Movies', 'Votes', '3000+'];
+            chain = ['Movies', 'Votes', '3000+', title];
         } else if (info.imdbVotes >= 1000) {
-            chain = ['Movies', 'Votes', '1000+'];
+            chain = ['Movies', 'Votes', '1000+', title];
         } else {
-            chain = ['Movies', 'Votes', 'Defunct'];
+            chain = ['Movies', 'Votes', 'Defunct', title];
         }
         addCdsObject(obj, createContainerChain(chain));
     } else {
-        chain = ['Movies', 'Votes', 'Unsorted'];
+        chain = ['Movies', 'Votes', 'Unsorted', title];
         addCdsObject(obj, createContainerChain(chain));
     }
 
     if (info.genre) {
         info.genre.forEach(function (genre) {
-            chain = ['Movies', 'Genre', '' + genre];
+            chain = ['Movies', 'Genre', '' + genre, title];
             addCdsObject(obj, createContainerChain(chain));
         });
     } else {
-        chain = ['Movies', 'Genre', 'Unsorted'];
+        chain = ['Movies', 'Genre', 'Unsorted', title];
         addCdsObject(obj, createContainerChain(chain));
     }
 
     if (info.director) {
         info.director.forEach(function (director) {
-            chain = ['Movies', 'Director', '' + director];
+            chain = ['Movies', 'Director', '' + director, title];
             addCdsObject(obj, createContainerChain(chain));
         });
     } else {
-        chain = ['Movies', 'Director', 'Unsorted'];
+        chain = ['Movies', 'Director', 'Unsorted', title];
         addCdsObject(obj, createContainerChain(chain));
     }
 
     if (info.writer) {
         info.writer.forEach(function (writer) {
-            chain = ['Movies', 'Writer', '' + writer];
+            chain = ['Movies', 'Writer', '' + writer, title];
             addCdsObject(obj, createContainerChain(chain));
         });
     } else {
-        chain = ['Movies', 'Writer', 'Unsorted'];
+        chain = ['Movies', 'Writer', 'Unsorted', title];
         addCdsObject(obj, createContainerChain(chain));
     }
 }
