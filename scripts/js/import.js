@@ -163,11 +163,167 @@ function addAudio(obj) {
     addCdsObject(obj, createContainerChain(chain), UPNP_CLASS_CONTAINER_MUSIC_COMPOSER);
 }
 
-// Locally served guessit server
-var VIDEO_GUESSIT_URL = getEnv('GUESSIT_URL') || 'http://localhost:5000/';
+var VIDEO_FETCH_URL = getEnv('GUESSIT_URL') || 'http://localhost:5000';
+var VIDEO_GUESSIT_URL = VIDEO_FETCH_URL + '/';
+var VIDEO_OMDB_URL = VIDEO_FETCH_URL + '/omdb/';
 
 var VIDEO_TIME_METRIC_RE = /(\d+):(\d+):(\d+)/;
 var VIDEO_DIM_METRIC_RE = /(\d+)x(\d+)/;
+
+var FILE_EXT_RE = /^(mkv|avi|mp4)$/i;
+var FILE_LANG_RE = /^(LT|EN|RU)/i;
+var FILE_SUBS_RE = /([A-Z]*sub)/i;
+var FILE_YEAR_RE = /^\(?(\d\d\d\d)\)?$/;
+var FILE_CODING_RE = /^(x264|h264|web\-?rip|web\-?dl|web\-?dlrip|dvd\-?rip|b[dr]\-?rip|hd\-?rip|hdtv|720p|1080p|avc|aac|ac3|dts|divx|xvid|bluray)$/i;
+var FILE_SEASON_RE = /^S(\d+)/i;
+var FILE_EPISODE_RE = /E(\d+)$/i;
+
+function matchFileExt(value) {
+    if (value.length < 3 || value.length > 4)
+        return;
+    var ret = value.match(FILE_EXT_RE);
+    if (ret)
+        return ret[1];
+}
+
+function matchLanguage(value) {
+    if (value.length < 2 || value.length > 3)
+        return;
+    var ret = value.match(FILE_LANG_RE);
+    if (ret)
+        return ret[1];
+}
+
+function matchSubtitres(value) {
+    var ret = value.match(FILE_SUBS_RE);
+    if (ret)
+        return ret[1];
+}
+
+function matchYear(value) {
+    var ret = value.match(FILE_YEAR_RE);
+    if (ret)
+        return +ret[1];
+}
+
+function matchCoding(value) {
+    var ret = value.match(FILE_CODING_RE);
+    if (ret)
+        return ret[1];
+}
+
+function matchSeason(value) {
+    var ret = value.match(FILE_SEASON_RE);
+    if (ret)
+        return +ret[1];
+}
+
+function matchEpisode(value) {
+    var ret = value.match(FILE_EPISODE_RE);
+    if (ret)
+        return +ret[1];
+}
+
+function cleanPrefixes(name) {
+    var result = name.match(/[\[\(\{][^\]\)\}]*[\]\)\}](.*)/)
+    if (result)
+        return result[1];
+    return name;
+}
+
+function swapTitle(line, length) {
+    let title;
+    var pos = length;
+    while (pos < length) {
+        if (/[ \.\-_]/.test(line[pos]))
+          break;
+        pos++;
+    }
+    title = line.slice(0, pos);
+    title = title.replace(/(\w{2,})[\._]/g, '$1 ').replace(/(\w{1}\.)(\w{2,})/g, '$1 $2');
+    return title;
+}
+
+function processName(name) {
+    var ret = {
+      type: 'movie'
+    };
+    var lastId;
+    var arr;
+
+    if (!name)
+        return;
+
+    name = cleanPrefixes(name);
+    arr = name.split(/[ \.\-_]/);
+
+    for (var i = arr.length - 1; i >= 0; i--) {
+        var val = arr[i];
+        var ext = matchFileExt(val);
+        var lang = matchLanguage(val);
+        var subs = matchSubtitres(val);
+        var year = matchYear(val);
+        var code = matchCoding(val);
+        var season = matchSeason(val);
+        var episode = matchEpisode(val);
+        if (!ret.ext && ext) {
+            ret.ext = ext
+            lastId = i;
+        }
+        if (lang) {
+            ret.lang = ret.lang || [];
+            ret.lang.push(lang);
+            lastId = i;
+        }
+        if (subs) {
+            ret.subs = ret.subs || [];
+            ret.subs.push(subs);
+            lastId = i;
+        }
+        if (!ret.year && year) {
+            ret.year = year;
+            lastId = i;
+        }
+        if (code) {
+            ret.code = ret.code || [];
+            ret.code.push(code);
+            lastId = i;
+        }
+        if (!ret.season && season) {
+            ret.season = season;
+            ret.type = 'episode';
+            lastId = i;
+        }
+        if (!ret.episode && episode) {
+            ret.episode = episode;
+            ret.type = 'episode';
+            lastId = i;
+        }
+    }
+
+    if (lastId) {
+        ret.title = swapTitle(name, arr.slice(0, lastId).join(' ').trim().length);
+        return ret;
+    } else {
+        return;
+    }
+}
+
+function processDirName(obj) {
+    var parts = obj.location.split('/');
+    if (parts.length < 2)
+        return;
+
+    var file = parts[parts.length - 2];
+
+    return processName(file);
+}
+
+function processFileName(obj) {
+    var file = obj.title;
+
+    return processName(file);
+}
 
 function grabVideoMetrics(obj) {
     var out = {}
@@ -188,6 +344,153 @@ function grabVideoMetrics(obj) {
     }
 
     return out;
+}
+
+function getVideoFileInfo(file) {
+    if (!doHttpGet || !urlEncode)
+        return;
+
+    var options = [
+        '--allowed-languages=lt',
+        '--excludes=part',
+    ].join(' ');
+    var response = doHttpGet(VIDEO_GUESSIT_URL + '?options=' + urlEncode(options) + '&filename=' + urlEncode(file));
+    if (!response) {
+        print('[video] Skipping item - no HTTP response; file: ', file);
+        return;
+    }
+
+    var info = JSON.parse(response)
+    if (!info) {
+        print('[video] Skipping item - bad guessit HTTP response `', response, '`; file: ', file);
+        return;
+    }
+
+    return info;
+}
+
+function getVideoOmdbInfo(type, title, season, episode) {
+    if (!doHttpGet || !urlEncode)
+        return;
+
+    if (!title)
+        return;
+
+    var name = title + ' ' + (season || '') + ' ' + (episode || '');
+    var url = VIDEO_OMDB_URL + '?title=' + urlEncode(title);
+    if (season && episode)
+        url += '&season=' + urlEncode(season) + '&episode=' + urlEncode(episode);
+    if (type)
+        url += '&type=' + urlEncode(type);
+
+    var response = doHttpGet(url);
+    if (!response) {
+        print('[video] Skipping item - no HTTP response; name: ', name);
+        return;
+    }
+
+    var info = JSON.parse(response)
+    if (!info) {
+        print('[video] Skipping item - bad OMDB HTTP response `', response, '`; name: ', name);
+        return;
+    }
+
+    return info;
+}
+
+function modPersonGeneric(title) {
+    return title.replace(/((?<=\bi)m|(?<=\b(you|they))re|(?<=\b(he|she|it))s|(?<=\b(wasn|weren|won))t|(?<=\b(i|you|they))ll|(?<=\b(i|you|we))ve)\b/gi, '\'$1');
+}
+
+function modPersonWere(title) {
+    return title.replace(/((?<=\bwe)re)\b/gi, '\'$1');
+}
+
+function modGenitive(title) {
+    return title.replace(/^(\S*)s\b/i, '$1\'s');
+}
+
+function grabVideoOmdbInfo(movieInfo, type, title) {
+    if (!movieInfo)
+        return;
+
+    var movieDetails = getVideoOmdbInfo(type || movieInfo.type, title || movieInfo.title, movieInfo.season, movieInfo.episode);
+    if (!movieDetails)
+        return;
+
+    return {
+        movieInfo: movieInfo,
+        movieDetails: movieDetails,
+    };
+}
+
+function grabVideoOmdbInfoModified(movieInfo, type, title, changed) {
+    if (title === changed)
+        return;
+
+    return grabVideoOmdbInfo(movieInfo, type, changed);
+}
+
+function grabVideoInfo(obj) {
+    var videoInfo;
+    var localInfo;
+    var guessInfo;
+
+    guessInfo = getVideoFileInfo(obj.location);
+    videoInfo = grabVideoOmdbInfo(guessInfo);
+    if (videoInfo)
+        return videoInfo;
+
+    /* Try file name only parsing */
+    videoInfo = grabVideoOmdbInfo(getVideoFileInfo(obj.title));
+    if (videoInfo)
+        return videoInfo;
+
+    localInfo = processDirName(obj);
+    if (localInfo) {
+        videoInfo = grabVideoOmdbInfo(localInfo);
+        if (videoInfo)
+            return videoInfo;
+
+        videoInfo = grabVideoOmdbInfo(guessInfo, localInfo.type, localInfo.title);
+        if (videoInfo)
+            return videoInfo;
+
+        videoInfo = grabVideoOmdbInfoModified(guessInfo, localInfo.type, localInfo.title, modPersonGeneric(localInfo.title));
+        if (videoInfo)
+            return videoInfo;
+
+        videoInfo = grabVideoOmdbInfoModified(guessInfo, localInfo.type, localInfo.title, modPersonWere(localInfo.title));
+        if (videoInfo)
+            return videoInfo;
+
+        videoInfo = grabVideoOmdbInfoModified(guessInfo, localInfo.type, localInfo.title, modGenitive(localInfo.title));
+        if (videoInfo)
+            return videoInfo;
+    }
+
+    localInfo = processFileName(obj);
+    if (localInfo) {
+        videoInfo = grabVideoOmdbInfo(localInfo);
+        if (videoInfo)
+            return videoInfo;
+
+        videoInfo = grabVideoOmdbInfo(guessInfo, localInfo.type, localInfo.title);
+        if (videoInfo)
+            return videoInfo;
+
+        videoInfo = grabVideoOmdbInfoModified(guessInfo, localInfo.type, localInfo.title, modPersonGeneric(localInfo.title));
+        if (videoInfo)
+            return videoInfo;
+
+        videoInfo = grabVideoOmdbInfoModified(guessInfo, localInfo.type, localInfo.title, modPersonWere(localInfo.title));
+        if (videoInfo)
+            return videoInfo;
+
+        videoInfo = grabVideoOmdbInfoModified(guessInfo, localInfo.type, localInfo.title, modGenitive(localInfo.title));
+        if (videoInfo)
+            return videoInfo;
+    }
 }
 
 function addMovie(obj, info) {
@@ -474,28 +777,29 @@ function addEpisode(obj, info) {
 }
 
 function addVideoCategory(obj) {
-    if (!doHttpGet || !urlEncode)
-        return;
-
-    var res = grabVideoMetrics(obj);
-    if (res.duration && res.duration <= 10) {
+    var movieMetrics = grabVideoMetrics(obj);
+    if (movieMetrics.duration && movieMetrics.duration <= 10) {
         print('[video] Skipping item - too short (<10); file: ', obj.location);
         return;
     }
-    if (!res.dimensions) {
+    if (!movieMetrics.dimensions) {
         print('[video] Skipping item - no dimensions; file: ', obj.location);
         return;
     }
 
-    var response = doHttpGet(VIDEO_GUESSIT_URL + '?options=-Llt&filename=' + urlEncode(obj.location));
-    if (!response) {
-        print('[video] Skipping item - no HTTP response; file: ', obj.location);
-        return;
+    var movieInfo;
+    var movieDetails;
+    var movieGuess = grabVideoInfo(obj);
+    if (!movieGuess) {
+        print('[video] Partial item - no incomplete info: ', obj.location);
+        movieInfo = getVideoFileInfo(obj.location)
+    } else {
+        movieInfo = movieGuess.movieInfo;
+        movieDetails = movieGuess.movieDetails;
     }
 
-    var movie = JSON.parse(response)
-    if (!movie) {
-        print('[video] Skipping item - bad HTTP response `', response, '`; file: ', obj.location);
+    if (!movieInfo) {
+        print('[video] Skipping item - no movie info: ', obj.location);
         return;
     }
 
@@ -503,9 +807,9 @@ function addVideoCategory(obj) {
 
     var mtmp;
     var minfo = {
-        type: movie.type,
-        title: movie.title,
-        year: +movie.year,
+        type: movieInfo.type,
+        title: movieInfo.title,
+        year: +movieInfo.year,
         complete: null,
         seasons: null,
         episodes: null,
@@ -519,8 +823,8 @@ function addVideoCategory(obj) {
         imdbVotes: null,
         episode: {
           title: null,
-          season: +movie.season,
-          episode: +movie.episode,
+          season: +movieInfo.season,
+          episode: +movieInfo.episode,
           year: null,
           duration: null,
           dimensions: null,
@@ -533,33 +837,33 @@ function addVideoCategory(obj) {
         }
     };
 
-    if (movie.res && movie.type === 'episode') {
-        minfo.episode.duration = res.duration;
-        minfo.episode.dimensions = res.dimensions;
+    if (movieInfo.type === 'episode') {
+        minfo.episode.duration = movieMetrics.duration;
+        minfo.episode.dimensions = movieMetrics.dimensions;
     } else {
-        minfo.duration = res.duration;
-        minfo.dimensions = res.dimensions;
+        minfo.duration = movieMetrics.duration;
+        minfo.dimensions = movieMetrics.dimensions;
     }
 
-    if (movie.ext) {
-        minfo.type = movie.ext.type;
-        minfo.title = movie.ext.title;
-        mtmp = (movie.ext.year || '').match(/(\d+)(?:\-(\d+))?/);
+    if (movieDetails) {
+        minfo.type = movieDetails.type;
+        minfo.title = movieDetails.title;
+        mtmp = (movieDetails.year || '').match(/(\d+)(?:\-(\d+))?/);
         if (mtmp) {
             minfo.year = +mtmp[0];
             minfo.complete = +mtmp[1];
         }
         if (minfo.complete) {
-            minfo.seasons = movie.ext.total_seasons;
-            minfo.episodes = movie.ext.total_episodes; // Hypothetic nonexisting property
+            minfo.seasons = movieDetails.total_seasons;
+            minfo.episodes = movieDetails.total_episodes; // Hypothetic nonexisting property
         }
-        mtmp = (movie.ext.runtime || '').match(/(\d+)/)
+        mtmp = (movieDetails.runtime || '').match(/(\d+)/)
         if (mtmp)
             minfo.duration = +mtmp[0];
-        minfo.certified = movie.ext.rated;
-        minfo.genre = (movie.ext.genre || '').split(/, /);
-        minfo.director = (movie.ext.director || '').split(/, /);
-        minfo.writer = (movie.ext.writer || '').split(/, /).map(function (writer) {
+        minfo.certified = movieDetails.rated;
+        minfo.genre = (movieDetails.genre || '').split(/, /);
+        minfo.director = (movieDetails.director || '').split(/, /);
+        minfo.writer = (movieDetails.writer || '').split(/, /).map(function (writer) {
             var name = writer.match(/[^\(\[\)\]]+/);
             if (!name)
                 return;
@@ -567,21 +871,21 @@ function addVideoCategory(obj) {
         }).filter(function (writer) {
             return !!writer;
         });
-        minfo.imdbRating = +movie.ext.imdb_rating;
-        minfo.imdbVotes = +(movie.ext.imdb_votes || '').replace(',', '');
+        minfo.imdbRating = +movieDetails.imdb_rating;
+        minfo.imdbVotes = +(movieDetails.imdb_votes || '').replace(',', '');
 
-        if (movie.ext.specific) {
-            minfo.episode.title = movie.ext.specific.title;
-            mtmp = +movie.ext.specific.year;
+        if (movieDetails.specific) {
+            minfo.episode.title = movieDetails.specific.title;
+            mtmp = +movieDetails.specific.year;
             if (mtmp)
                 minfo.episode.year = mtmp;
-            mtmp = (movie.ext.specific.runtime || '').match(/(\d+)/)
+            mtmp = (movieDetails.specific.runtime || '').match(/(\d+)/)
             if (mtmp)
                 minfo.episode.duration = +mtmp[0];
-            minfo.episode.certified = movie.ext.specific.rated;
-            minfo.episode.genre = (movie.ext.specific.genre || '').split(/, /);
-            minfo.episode.director = (movie.ext.specific.director || '').split(/, /);
-            minfo.episode.writer = (movie.ext.specific.writer || '').split(/, /).map(function (writer) {
+            minfo.episode.certified = movieDetails.specific.rated;
+            minfo.episode.genre = (movieDetails.specific.genre || '').split(/, /);
+            minfo.episode.director = (movieDetails.specific.director || '').split(/, /);
+            minfo.episode.writer = (movieDetails.specific.writer || '').split(/, /).map(function (writer) {
                 var name = writer.match(/[^\(\[\)\]]+/);
                 if (!name)
                     return;
@@ -589,14 +893,14 @@ function addVideoCategory(obj) {
             }).filter(function (writer) {
                 return !!writer;
             });
-            minfo.episode.imdbRating = +movie.ext.specific.imdb_rating;
-            minfo.episode.imdbVotes = +(movie.ext.specific.imdb_votes || '').replace(',', '');
+            minfo.episode.imdbRating = +movieDetails.specific.imdb_rating;
+            minfo.episode.imdbVotes = +(movieDetails.specific.imdb_votes || '').replace(',', '');
         }
     }
 
     switch (minfo.type) {
         case 'movie':
-            if (res.duration && res.duration <= 45) {
+            if (movieMetrics.duration && movieMetrics.duration <= 45) {
                 print('[video] Skipping item - too short (<45); file: ', obj.location);
                 return;
             }
