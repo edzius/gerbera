@@ -225,14 +225,14 @@ function matchEpisode(value) {
 }
 
 function cleanPrefixes(name) {
-    var result = name.match(/[\[\(\{][^\]\)\}]*[\]\)\}](.*)/)
+    var result = name.match(/[\[\(\{][^\]\)\}]*[\]\)\}](.*)/);
     if (result)
         return result[1];
     return name;
 }
 
 function swapTitle(line, length) {
-    let title;
+    var title;
     var pos = length;
     while (pos < length) {
         if (/[ \.\-_]/.test(line[pos]))
@@ -267,7 +267,7 @@ function processName(name) {
         var season = matchSeason(val);
         var episode = matchEpisode(val);
         if (!ret.ext && ext) {
-            ret.ext = ext
+            ret.ext = ext;
             lastId = i;
         }
         if (lang) {
@@ -326,16 +326,17 @@ function processFileName(obj) {
 }
 
 function grabVideoMetrics(obj) {
-    var out = {}
+    var out = {};
+    var res;
 
     if (obj.res && obj.res.duration) {
-        var res = obj.res.duration.match(VIDEO_TIME_METRIC_RE);
+        res = obj.res.duration.match(VIDEO_TIME_METRIC_RE);
         if (res)
             out.duration = (+res[1] * 60) + (+res[2]) + (+res[3] > 0 ? 1 : 0);
     }
 
     if (obj.res && obj.res.resolution) {
-        var res = obj.res.resolution.match(VIDEO_DIM_METRIC_RE);
+        res = obj.res.resolution.match(VIDEO_DIM_METRIC_RE);
         if (res)
             out.dimensions = {
                 width: +res[1],
@@ -360,7 +361,7 @@ function getVideoFileInfo(file) {
         return;
     }
 
-    var info = JSON.parse(response)
+    var info = JSON.parse(response);
     if (!info) {
         print('[video] Skipping item - bad guessit HTTP response `', response, '`; file: ', file);
         return;
@@ -389,7 +390,7 @@ function getVideoOmdbInfo(type, title, season, episode) {
         return;
     }
 
-    var info = JSON.parse(response)
+    var info = JSON.parse(response);
     if (!info) {
         print('[video] Skipping item - bad OMDB HTTP response `', response, '`; name: ', name);
         return;
@@ -398,16 +399,29 @@ function getVideoOmdbInfo(type, title, season, episode) {
     return info;
 }
 
-function modPersonGeneric(title) {
-    return title.replace(/((?<=\bi)m|(?<=\b(you|they))re|(?<=\b(he|she|it))s|(?<=\b(wasn|weren|won))t|(?<=\b(i|you|they))ll|(?<=\b(i|you|we))ve)\b/gi, '\'$1');
+function modContractionsGeneric(title) {
+    //return title.replace(/((?<=\bi)m|(?<=\b(you|they))re|(?<=\b(he|she|it))s|(?<=\b(wasn|weren|won))t|(?<=\b(i|you|they))ll|(?<=\b(i|you|we))ve)\b/gi, '\'$1');
+    return title
+      .replace(/\b(isn|hasn|hadn|didn|wouldn|can|won|wasn|weren)t\b/gi, '$1\'t')
+      .replace(/\b(she|there|he|it|who)s\b/gi, '$1\'s')
+      .replace(/\bim\b/gi, 'i\'m')
+      .replace(/\b(i|you|they)ll\b/gi, '$1\'ll') // we'll, she'll
+      .replace(/\b(i|you|she|we|they)d\b/gi, '$1\'d')
+      .replace(/\b(i|you|we|they)ve\b/gi, '$1\'ve')
+      .replace(/\b(you|they)re\b/gi, '$1\'re');
 }
 
-function modPersonWere(title) {
-    return title.replace(/((?<=\bwe)re)\b/gi, '\'$1');
+function modContractionsWere(title) {
+    //return title.replace(/((?<=\bwe)re)\b/gi, '\'$1');
+    return title.replace(/\bwere\b/gi, 'we\'re');
 }
 
-function modGenitive(title) {
+function modPossesiveSingular(title) {
     return title.replace(/^(\S*)s\b/i, '$1\'s');
+}
+
+function modPossesivePlural(title) {
+    return title.replace(/^(\S*)s\b/i, '$1s\'');
 }
 
 function grabVideoOmdbInfo(movieInfo, type, title) {
@@ -456,15 +470,19 @@ function grabVideoInfo(obj) {
         if (videoInfo)
             return videoInfo;
 
-        videoInfo = grabVideoOmdbInfoModified(guessInfo, localInfo.type, localInfo.title, modPersonGeneric(localInfo.title));
+        videoInfo = grabVideoOmdbInfoModified(guessInfo, localInfo.type, localInfo.title, modContractionsGeneric(localInfo.title));
         if (videoInfo)
             return videoInfo;
 
-        videoInfo = grabVideoOmdbInfoModified(guessInfo, localInfo.type, localInfo.title, modPersonWere(localInfo.title));
+        videoInfo = grabVideoOmdbInfoModified(guessInfo, localInfo.type, localInfo.title, modContractionsWere(localInfo.title));
         if (videoInfo)
             return videoInfo;
 
-        videoInfo = grabVideoOmdbInfoModified(guessInfo, localInfo.type, localInfo.title, modGenitive(localInfo.title));
+        videoInfo = grabVideoOmdbInfoModified(guessInfo, localInfo.type, localInfo.title, modPossesiveSingular(localInfo.title));
+        if (videoInfo)
+            return videoInfo;
+
+        videoInfo = grabVideoOmdbInfoModified(guessInfo, localInfo.type, localInfo.title, modPossesivePlural(localInfo.title));
         if (videoInfo)
             return videoInfo;
     }
@@ -479,15 +497,19 @@ function grabVideoInfo(obj) {
         if (videoInfo)
             return videoInfo;
 
-        videoInfo = grabVideoOmdbInfoModified(guessInfo, localInfo.type, localInfo.title, modPersonGeneric(localInfo.title));
+        videoInfo = grabVideoOmdbInfoModified(guessInfo, localInfo.type, localInfo.title, modContractionsGeneric(localInfo.title));
         if (videoInfo)
             return videoInfo;
 
-        videoInfo = grabVideoOmdbInfoModified(guessInfo, localInfo.type, localInfo.title, modPersonWere(localInfo.title));
+        videoInfo = grabVideoOmdbInfoModified(guessInfo, localInfo.type, localInfo.title, modContractionsWere(localInfo.title));
         if (videoInfo)
             return videoInfo;
 
-        videoInfo = grabVideoOmdbInfoModified(guessInfo, localInfo.type, localInfo.title, modGenitive(localInfo.title));
+        videoInfo = grabVideoOmdbInfoModified(guessInfo, localInfo.type, localInfo.title, modPossesiveSingular(localInfo.title));
+        if (videoInfo)
+            return videoInfo;
+
+        videoInfo = grabVideoOmdbInfoModified(guessInfo, localInfo.type, localInfo.title, modPossesivePlural(localInfo.title));
         if (videoInfo)
             return videoInfo;
     }
@@ -509,7 +531,7 @@ function addMovie(obj, info) {
      * Movies.Writer.<Writer>.*
      */
 
-    var title = '' + info.title || 'Untitled'
+    var title = '' + info.title || 'Untitled';
 
     if (info.title) {
         chain = ['Movies', 'List', '[' + (info.year || 'XXXX') + '] ' + info.title];
@@ -677,7 +699,7 @@ function addEpisode(obj, info) {
      * Series.Completed.<Series>.<Seasons>.*
      */
 
-    var title = info.title
+    var title = info.title;
     var season = info.episode ? ('S' + info.episode.season) : undefined;
 
     if (info.title) {
@@ -792,7 +814,7 @@ function addVideoCategory(obj) {
     var movieGuess = grabVideoInfo(obj);
     if (!movieGuess) {
         print('[video] Partial item - no incomplete info: ', obj.location);
-        movieInfo = getVideoFileInfo(obj.location)
+        movieInfo = getVideoFileInfo(obj.location);
     } else {
         movieInfo = movieGuess.movieInfo;
         movieDetails = movieGuess.movieDetails;
@@ -857,7 +879,7 @@ function addVideoCategory(obj) {
             minfo.seasons = movieDetails.total_seasons;
             minfo.episodes = movieDetails.total_episodes; // Hypothetic nonexisting property
         }
-        mtmp = (movieDetails.runtime || '').match(/(\d+)/)
+        mtmp = (movieDetails.runtime || '').match(/(\d+)/);
         if (mtmp)
             minfo.duration = +mtmp[0];
         minfo.certified = movieDetails.rated;
@@ -879,7 +901,7 @@ function addVideoCategory(obj) {
             mtmp = +movieDetails.specific.year;
             if (mtmp)
                 minfo.episode.year = mtmp;
-            mtmp = (movieDetails.specific.runtime || '').match(/(\d+)/)
+            mtmp = (movieDetails.specific.runtime || '').match(/(\d+)/);
             if (mtmp)
                 minfo.episode.duration = +mtmp[0];
             minfo.episode.certified = movieDetails.specific.rated;
