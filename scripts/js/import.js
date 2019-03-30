@@ -815,6 +815,10 @@ function addVideoCategory(obj) {
     if (!movieGuess) {
         print('[video] Partial item - no incomplete info: ', obj.location);
         movieInfo = getVideoFileInfo(obj.location);
+        if (movieInfo) {
+            chain = ['Debug', 'Partial'].concat(getRootPath(object_script_path, obj.location));
+            addCdsObject(obj, createContainerChain(chain));
+        }
     } else {
         movieInfo = movieGuess.movieInfo;
         movieDetails = movieGuess.movieDetails;
@@ -822,6 +826,8 @@ function addVideoCategory(obj) {
 
     if (!movieInfo) {
         print('[video] Skipping item - no movie info: ', obj.location);
+        chain = ['Debug', 'Missing'].concat(getRootPath(object_script_path, obj.location));
+        addCdsObject(obj, createContainerChain(chain));
         return;
     }
 
