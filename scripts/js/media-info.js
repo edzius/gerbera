@@ -319,7 +319,7 @@ function addVideo(obj) {
   }
 
   info = httpGetJson(VIDEO_FETCH_URL, {
-    file: file,
+    filename: file,
   });
   if (!info) {
     print('[video] Skipping item - no movie info: ', file);
