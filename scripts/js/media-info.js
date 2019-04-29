@@ -91,44 +91,44 @@ function addMovie(obj, info) {
         addCdsObject(obj, createContainerChain(chain));
     }
 
-    if (info.certified) {
-        chain = ['Movies', 'Certified', '' + info.certified, title];
+    if (info.rated) {
+        chain = ['Movies', 'Certified', '' + info.rated, title];
         addCdsObject(obj, createContainerChain(chain));
     } else {
         chain = ['Movies', 'Certified', 'Unsorted', title];
         addCdsObject(obj, createContainerChain(chain));
     }
 
-    if (info.imdbRating) {
-        chain = ['Movies', 'Rating', '' + info.imdbRating, title];
+    if (info.imdb_rating) {
+        chain = ['Movies', 'Rating', '' + info.imdb_rating, title];
         addCdsObject(obj, createContainerChain(chain));
     } else {
         chain = ['Movies', 'Rating', 'Unsorted', title];
         addCdsObject(obj, createContainerChain(chain));
     }
 
-    if (info.imdbVotes) {
-        if (info.imdbVotes >= 500000) {
+    if (info.imdb_votes) {
+        if (info.imdb_votes >= 500000) {
             chain = ['Movies', 'Votes', '500000+', title];
-        } else if (info.imdbVotes >= 400000) {
+        } else if (info.imdb_votes >= 400000) {
             chain = ['Movies', 'Votes', '400000+', title];
-        } else if (info.imdbVotes >= 300000) {
+        } else if (info.imdb_votes >= 300000) {
             chain = ['Movies', 'Votes', '300000+', title];
-        } else if (info.imdbVotes >= 200000) {
+        } else if (info.imdb_votes >= 200000) {
             chain = ['Movies', 'Votes', '200000+', title];
-        } else if (info.imdbVotes >= 100000) {
+        } else if (info.imdb_votes >= 100000) {
             chain = ['Movies', 'Votes', '100000+', title];
-        } else if (info.imdbVotes >= 70000) {
+        } else if (info.imdb_votes >= 70000) {
             chain = ['Movies', 'Votes', '70000+', title];
-        } else if (info.imdbVotes >= 30000) {
+        } else if (info.imdb_votes >= 30000) {
             chain = ['Movies', 'Votes', '30000+', title];
-        } else if (info.imdbVotes >= 10000) {
+        } else if (info.imdb_votes >= 10000) {
             chain = ['Movies', 'Votes', '10000+', title];
-        } else if (info.imdbVotes >= 7000) {
+        } else if (info.imdb_votes >= 7000) {
             chain = ['Movies', 'Votes', '7000+', title];
-        } else if (info.imdbVotes >= 3000) {
+        } else if (info.imdb_votes >= 3000) {
             chain = ['Movies', 'Votes', '3000+', title];
-        } else if (info.imdbVotes >= 1000) {
+        } else if (info.imdb_votes >= 1000) {
             chain = ['Movies', 'Votes', '1000+', title];
         } else {
             chain = ['Movies', 'Votes', 'Defunct', title];
@@ -326,6 +326,12 @@ function addVideo(obj) {
     addCdsObject(obj, createContainerChain(['Unknown'].concat(path)));
     return;
   }
+
+  info.duration = length;
+  info.dimensions = {
+    width: width,
+    height: height,
+  };
 
   switch (info.type) {
     case 'movie':
