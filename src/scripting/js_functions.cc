@@ -230,7 +230,7 @@ duk_ret_t js_httpGet(duk_context *ctx)
 
     try {
         log_debug("DOWNLOADING URL: %s\n", requrl);
-        buffer = URL::download(_(requrl), &retcode,
+        buffer = URL::download(requrl, &retcode,
             nullptr, false, false, true);
 
     } catch (const Exception& ex) {
