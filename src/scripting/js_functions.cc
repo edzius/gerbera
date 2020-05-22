@@ -235,7 +235,7 @@ duk_ret_t js_httpGet(duk_context *ctx)
 
     } catch (const std::runtime_error& ex) {
         log_error("Failed to GET HTTP request: %s\n",
-            ex.getMessage().c_str());
+            ex.what());
         return 0;
     }
 
