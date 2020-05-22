@@ -233,7 +233,7 @@ duk_ret_t js_httpGet(duk_context *ctx)
         buffer = URL::download(requrl, &retcode,
             nullptr, false, false, true);
 
-    } catch (const Exception& ex) {
+    } catch (const std::runtime_error& ex) {
         log_error("Failed to GET HTTP request: %s\n",
             ex.getMessage().c_str());
         return 0;
@@ -251,18 +251,8 @@ duk_ret_t js_httpGet(duk_context *ctx)
 
     log_debug("GOT BUFFER\n%s\n", buffer.c_str());
 
-    try
-    {
-        duk_push_lstring(ctx, buffer.c_str(), buffer.length());
-        return 1;
-    }
-    catch (const Exception & e)
-    {
-        log_error("%s\n", e.getMessage().c_str());
-        e.printStackTrace();
-    }
-
-    return 0;
+    duk_push_lstring(ctx, buffer.c_str(), buffer.length());
+    return 1;
 }
 
 duk_ret_t js_urlEncode(duk_context *ctx)
